@@ -10,7 +10,7 @@ app.secret_key = 'your_secret_key'
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True,origins=["http://localhost:3000"])
 
 def connect_db():
     return mysql.connector.connect(**db_config)
@@ -147,6 +147,95 @@ def tenant():
 @app.route('/static/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+
+# ---------------- GET USER PROFILE ----------------
+@app.route('/profile', methods=['GET'])
+def profile():
+    if 'user' in session:
+        user = session['user']
+        return jsonify({
+            "id": user["id"],
+            "username": user["username"],
+            "email": user.get("email", ""),
+            "phone": user.get("phone", ""),
+            "address": user.get("address", ""),
+            "role": user["role"]
+        })
+    else:
+        return jsonify({"message": "Unauthorized"}), 401
+
+#---------------MY FLATS------#
+
+@app.route('/myflats', methods=['GET'])
+def my_flats():
+
+    print("Session user:", session.get('user')) 
+    if 'user' not in session:
+        return jsonify({"message": "Unauthorized"}), 401
+    
+    
+
+    landlord_id = session['user']['id']
+    con = connect_db()
+    cur = con.cursor(dictionary=True)
+    cur.execute("SELECT * FROM flats WHERE landlord_id = %s", (landlord_id,))
+    flats = cur.fetchall()
+    con.close()
+
+    for f in flats:
+        f['image_url'] = f"/static/uploads/{os.path.basename(f['image_path'])}"
+
+    return jsonify({"flats": flats})
+
+
+@app.route('/myflats/<int:flat_id>', methods=['PUT'])
+def edit_flat(flat_id):
+    if 'user' not in session:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.json
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute("""
+        UPDATE flats 
+        SET name=%s, phone=%s, address=%s, location_link=%s, rent=%s, facilities=%s
+        WHERE id=%s AND landlord_id=%s
+    """, (
+        data['name'], data['phone'], data['address'], data['location_link'],
+        data['rent'], data['facilities'], flat_id, session['user']['id']
+    ))
+    con.commit()
+    con.close()
+    return jsonify({"message": "Flat updated successfully"})
+
+
+@app.route('/myflats/<int:flat_id>', methods=['DELETE'])
+def delete_flat(flat_id):
+    if 'user' not in session:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    con = connect_db()
+    cur = con.cursor(dictionary=True)
+    cur.execute("SELECT image_path FROM flats WHERE id=%s AND landlord_id=%s", (flat_id, session['user']['id']))
+    row = cur.fetchone()
+    if not row:
+        return jsonify({"message": "Flat not found"}), 404
+
+    image_path = row['image_path']
+
+    cur.execute("DELETE FROM flats WHERE id=%s AND landlord_id=%s", (flat_id, session['user']['id']))
+    con.commit()
+    con.close()
+
+    if os.path.exists(image_path):
+        os.remove(image_path)
+
+    return jsonify({"message": "Flat deleted successfully"})
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
