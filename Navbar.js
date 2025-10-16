@@ -29,14 +29,17 @@ function Navbar() {
 
   return (
     <div className="navbar">
-      <h2>FlatFinder</h2>
-      <div>
+      <div className="logo">
+        <Link to="/">FlatFinder</Link>
+      </div>
+      <div className="nav-links">
         <Link to="/">Home</Link>
         <Link to="/tenant">Find PG/Flat</Link>
-        <Link to="/landlord">Post Your Property</Link>
+        {token && <Link to="/landlord">Post Your Property</Link>}
 
         {!token && <Link to="/register">Register</Link>}
         {!token && <Link to="/login">Login</Link>}
+
         {token && <Link to="/myflats">My Flats</Link>}
         {token && <Link to="/profile">Profile</Link>}
         {token && (
