@@ -26,7 +26,7 @@ const stringToColor = (string) => {
 
   for (i = 0; i < 3; i += 1) {
     const value = (hash >> (i * 8)) & 0xff;
-    color += `00${value.toString(16)}`.slice(-2);
+    color += "00" + value.toString(16).slice(-2);
   }
 
   return color;
@@ -41,7 +41,7 @@ const stringAvatar = (name) => {
       fontSize: 32,
       fontWeight: "bold",
     },
-    children: name ? name.split(" ").map(n => n[0]).join("").toUpperCase() : "U",
+    children: name ? name.split(" ").map((n) => n[0]).join("").toUpperCase() : "U",
   };
 };
 
@@ -63,9 +63,7 @@ const Profile = () => {
   useEffect(() => {
     axios
       .get("http://localhost:5000/profile", { withCredentials: true })
-      .then((res) => {
-        setUser(res.data);
-      })
+      .then((res) => setUser(res.data))
       .catch((err) => console.log(err));
   }, []);
 
@@ -73,7 +71,7 @@ const Profile = () => {
   useEffect(() => {
     if (user.role === "landlord" && user.id) {
       axios
-        .get(`http://localhost:5000/myflats`, { withCredentials: true })
+        .get("http://localhost:5000/myflats", { withCredentials: true })
         .then((res) => setFlats(res.data.flats))
         .catch((err) => console.log(err));
     }
@@ -97,6 +95,22 @@ const Profile = () => {
       .then(() => alert("Profile updated!"))
       .catch((err) => console.log(err));
     setEditMode(false);
+  };
+
+  // ------------------- Delete Account -------------------
+  const handleDeleteAccount = () => {
+    if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
+      axios
+        .delete("http://localhost:5000/delete_account", { withCredentials: true })
+        .then((res) => {
+          alert(res.data.message);
+          window.location.href = "/"; // Redirect to home after deletion
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("Failed to delete account");
+        });
+    }
   };
 
   return (
@@ -126,18 +140,32 @@ const Profile = () => {
         </Box>
 
         {user.role !== "Admin" && (
-          <Button
-            variant="contained"
-            onClick={() => setEditMode(!editMode)}
-            sx={{
-              backgroundColor: "#fff",
-              color: "#6829ad",
-              fontWeight: "bold",
-              "&:hover": { backgroundColor: "#f3f3f3" },
-            }}
-          >
-            {editMode ? "Cancel" : "Edit"}
-          </Button>
+          <Box display="flex" gap={2}>
+            <Button
+              variant="contained"
+              onClick={() => setEditMode(!editMode)}
+              sx={{
+                backgroundColor: "#fff",
+                color: "#6829ad",
+                fontWeight: "bold",
+                "&:hover": { backgroundColor: "#f3f3f3" },
+              }}
+            >
+              {editMode ? "Cancel" : "Edit"}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleDeleteAccount}
+              sx={{
+                backgroundColor: "red",
+                color: "#fff",
+                fontWeight: "bold",
+                "&:hover": { backgroundColor: "#a30000" },
+              }}
+            >
+              Delete Account
+            </Button>
+          </Box>
         )}
       </Box>
 
