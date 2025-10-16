@@ -141,4 +141,3 @@ function Landlord() {
 }
 
 export default Landlord;
-
